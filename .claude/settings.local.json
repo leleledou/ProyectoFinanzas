@@ -5,7 +5,12 @@
       "Bash(python main.py)",
       "Bash(python main.py:*)",
       "Bash(python test_casos.py)",
-      "Bash(python test_full.py)"
+      "Bash(python test_full.py)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c \"from parser import analizar_texto, TIPOS; from validador import validar; from motor import calcular; from criterio import generar; from sensibilidad import analizar; print\\('OK: todos los módulos importan correctamente'\\)\")",
+      "Bash(where streamlit:*)",
+      "Bash(where python:*)"
     ]
   }
 }
