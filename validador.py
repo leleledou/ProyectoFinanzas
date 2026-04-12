@@ -57,10 +57,10 @@ REQUERIDAS = {
         },
     },
     'convertible': {
-        'obligatorias': ['inversion', 'valuation_cap', 'valoracion_pre', 'descuento_pct'],
-        'opcionales': [],
+        'obligatorias': ['inversion', 'valuation_cap', 'descuento_pct'],
+        'opcionales': ['valoracion_pre'],
         'calculos': {
-            'dilucion': ['inversion', 'valuation_cap', 'valoracion_pre', 'descuento_pct'],
+            'dilucion': ['inversion', 'valuation_cap', 'descuento_pct'],
         },
     },
     'valor_terminal': {
@@ -99,6 +99,8 @@ NOMBRES_LEGIBLES = {
     'multiplo': 'múltiplo de salida',
     'ingresos': 'ingresos base',
     'costos': 'costos base',
+    'ingreso_mensual': 'ingreso mensual',
+    'meses': 'meses',
 }
 
 

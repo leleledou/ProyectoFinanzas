@@ -61,12 +61,10 @@ def _criterio_van_tir(res: Dict, variables: Dict,
     periodos = res.get('periodos', 0)
     lineas = []
 
-    if van is None:
-        lineas.append("No se pudo calcular el VAN con los datos disponibles.")
-        return lineas
-
     # Veredicto principal
-    if van > 0:
+    if van is None:
+        lineas.append("No se pudo calcular el VAN con los datos disponibles (falta tasa de descuento).")
+    elif van > 0:
         lineas.append(f"El proyecto ES VIABLE: genera un Valor Actual Neto positivo de ${van:,.2f}.")
         lineas.append("  Esto significa que el proyecto crea valor por encima del costo de capital.")
     else:
@@ -75,16 +73,20 @@ def _criterio_van_tir(res: Dict, variables: Dict,
 
     # TIR vs tasa
     if tir is not None:
-        if tir > tasa:
-            margen = (tir - tasa) * 100
-            lineas.append(f"La TIR ({tir*100:.2f}%) supera la tasa de descuento ({tasa*100:.2f}%) en {margen:.1f} puntos.")
-            if margen > 10:
-                lineas.append("  El margen de seguridad es amplio, lo que indica baja sensibilidad al riesgo.")
+        if tasa and tasa > 0:
+            if tir > tasa:
+                margen = (tir - tasa) * 100
+                lineas.append(f"La TIR ({tir*100:.2f}%) supera la tasa de descuento ({tasa*100:.2f}%) en {margen:.1f} puntos.")
+                if margen > 10:
+                    lineas.append("  El margen de seguridad es amplio, lo que indica baja sensibilidad al riesgo.")
+                else:
+                    lineas.append("  El margen de seguridad es ajustado; pequeños cambios podrían afectar la viabilidad.")
             else:
-                lineas.append("  El margen de seguridad es ajustado; pequeños cambios podrían afectar la viabilidad.")
+                lineas.append(f"La TIR ({tir*100:.2f}%) está por debajo de la tasa requerida ({tasa*100:.2f}%).")
+                lineas.append("  El rendimiento del proyecto no compensa el riesgo asumido.")
         else:
-            lineas.append(f"La TIR ({tir*100:.2f}%) está por debajo de la tasa requerida ({tasa*100:.2f}%).")
-            lineas.append("  El rendimiento del proyecto no compensa el riesgo asumido.")
+            lineas.append(f"La TIR del proyecto es {tir*100:.2f}%.")
+            lineas.append("  Sin tasa de descuento explícita, compare este rendimiento con su costo de capital.")
     else:
         lineas.append("La TIR no pudo calcularse (posiblemente los flujos no cambian de signo).")
 
@@ -122,13 +124,29 @@ def _criterio_interes(res: Dict, variables: Dict,
     diferencia = res.get('diferencia_vs_simple')
     lineas = []
 
-    lineas.append(f"Un capital de ${capital:,.2f} al {tasa*100:.2f}% anual durante {periodos:.0f} años")
-    lineas.append(f"  crece hasta ${monto_f:,.2f}, generando ${interes:,.2f} de intereses.")
-    lineas.append(f"  El rendimiento total sobre el capital es del {rendimiento*100:.2f}%.")
+    tasa_simp_ref = res.get('tasa_simple_ref')
+    if tasa_simp_ref and abs(tasa_simp_ref - tasa) > 0.001:
+        # Comparación explícita: tasas diferentes para simple y compuesto
+        monto_s = res.get('monto_simple_ref', 0)
+        interes_s = res.get('interes_simple_ref', 0)
+        lineas.append(f"Comparación de ofertas a {periodos:.0f} años:")
+        lineas.append(f"  Interés SIMPLE al {tasa_simp_ref*100:.2f}% anual:")
+        lineas.append(f"    Monto final: ${monto_s:,.2f} | Interés: ${interes_s:,.2f}")
+        lineas.append(f"  Interés COMPUESTO al {tasa*100:.2f}% anual:")
+        lineas.append(f"    Monto final: ${monto_f:,.2f} | Interés: ${interes:,.2f}")
+        diff = monto_s - monto_f
+        if diff > 0:
+            lineas.append(f"  El interés simple paga ${diff:,.2f} MÁS. Conviene la oferta simple.")
+        else:
+            lineas.append(f"  El interés compuesto paga ${abs(diff):,.2f} MÁS. Conviene el compuesto.")
+    else:
+        lineas.append(f"Un capital de ${capital:,.2f} al {tasa*100:.2f}% anual durante {periodos:.0f} años")
+        lineas.append(f"  crece hasta ${monto_f:,.2f}, generando ${interes:,.2f} de intereses.")
+        lineas.append(f"  El rendimiento total sobre el capital es del {rendimiento*100:.2f}%.")
 
-    if diferencia and diferencia > 0:
-        lineas.append(f"Al capitalizar, se generan ${diferencia:,.2f} adicionales respecto al interés simple.")
-        lineas.append("  Esto ilustra el efecto del interés compuesto en horizontes largos.")
+        if diferencia and diferencia > 0:
+            lineas.append(f"Al capitalizar, se generan ${diferencia:,.2f} adicionales respecto al interés simple.")
+            lineas.append("  Esto ilustra el efecto del interés compuesto en horizontes largos.")
 
     if periodos >= 10:
         lineas.append(f"Con {periodos:.0f} años, el efecto del tiempo es significativo: ")
@@ -319,12 +337,25 @@ def _criterio_valor_terminal(res: Dict, variables: Dict,
 def _criterio_sensibilidad(tipo: str, sens: Dict) -> List[str]:
     filas = sens.get('variaciones', [])
     var = sens.get('variable', '')
+    es_discreto = sens.get('es_discreto', False)
     if not filas:
         return []
+
+    if es_discreto:
+        return _criterio_sens_discreto(tipo, sens)
 
     lineas = [f"Análisis de sensibilidad sobre '{var}':"]
 
     if tipo == 'van_tir':
+        filas_con_van = [f for f in filas if f.get('van') is not None]
+        if not filas_con_van:
+            tirs = [f.get('tir') for f in filas if f.get('tir') is not None]
+            if tirs:
+                lineas.append(f"  TIR varía entre {min(tirs)*100:.2f}% y {max(tirs)*100:.2f}%.")
+                lineas.append("  (Sin tasa de descuento provista, no se calcula VAN por escenario.)")
+            return lineas
+
+        filas = filas_con_van
         viables = [f for f in filas if f.get('viable')]
         no_viables = [f for f in filas if not f.get('viable')]
 
@@ -360,5 +391,132 @@ def _criterio_sensibilidad(tipo: str, sens: Dict) -> List[str]:
         else:
             meses_max = max((f.get('meses') or 0) for f in filas)
             lineas.append(f"  En el mejor escenario, la empresa sobrevive {meses_max} meses.")
+
+    elif tipo == 'convertible':
+        dils = [f['dilucion_pct'] for f in filas]
+        min_dil = min(dils)
+        max_dil = max(dils)
+        lineas.append(f"  La dilución varía entre {min_dil:.2f}% y {max_dil:.2f}%.")
+        owns = [f['ownership_fundador'] for f in filas]
+        min_own = min(owns)
+        if min_own < 65:
+            lineas.append(f"  ALERTA: en el peor escenario, el fundador retiene solo {min_own:.2f}%.")
+        else:
+            lineas.append(f"  En todos los escenarios, el fundador retiene al menos {min_own:.2f}%.")
+
+    elif tipo == 'capital_trabajo':
+        ciclos = [f['ciclo_caja'] for f in filas]
+        min_c = min(ciclos)
+        max_c = max(ciclos)
+        lineas.append(f"  El ciclo de caja varía entre {min_c:.0f} y {max_c:.0f} días.")
+        desfav = [f for f in filas if f['ciclo_caja'] >= 60]
+        if desfav:
+            lineas.append(f"  En {len(desfav)} de {len(filas)} escenarios el ciclo es desfavorable (≥60 días).")
+
+    elif tipo == 'valor_terminal':
+        vts = [f['valor_terminal'] for f in filas if f.get('valor_terminal') is not None]
+        if vts:
+            lineas.append(f"  El valor terminal oscila entre ${min(vts):,.0f} y ${max(vts):,.0f}.")
+            ratio = max(vts) / min(vts) if min(vts) > 0 else float('inf')
+            if ratio > 3:
+                lineas.append("  Alta sensibilidad: el rango es muy amplio. Validar supuestos cuidadosamente.")
+
+    return lineas
+
+
+def _criterio_sens_discreto(tipo: str, sens: Dict) -> List[str]:
+    """Genera criterio para sensibilidad con escenarios discretos."""
+    filas = sens.get('variaciones', [])
+    var = sens.get('variable', '')
+    lineas = [f"Sensibilidad discreta sobre '{var}':"]
+
+    if tipo == 'van_tir':
+        filas_con_van = [f for f in filas if f.get('van') is not None]
+        if not filas_con_van:
+            # Sin tasa: reportar solo TIRs
+            tirs = [(f['valor_discreto'], f.get('tir')) for f in filas if f.get('tir') is not None]
+            if tirs:
+                tir_vals = [t for _, t in tirs]
+                lineas.append(f"  TIR varía entre {min(tir_vals)*100:.2f}% y {max(tir_vals)*100:.2f}%.")
+                mejor_val, mejor_tir = max(tirs, key=lambda x: x[1])
+                peor_val, peor_tir = min(tirs, key=lambda x: x[1])
+                lineas.append(f"  Mejor escenario: valor={mejor_val:,.0f} → TIR={mejor_tir*100:.2f}%")
+                lineas.append(f"  Peor escenario: valor={peor_val:,.0f} → TIR={peor_tir*100:.2f}%")
+                lineas.append("  (Sin tasa de descuento provista, no se calcula VAN por escenario.)")
+            return lineas
+
+        viables = [f for f in filas_con_van if f.get('viable')]
+        no_viables = [f for f in filas_con_van if not f.get('viable')]
+        lineas.append(f"  De {len(filas_con_van)} escenarios: {len(viables)} viables, {len(no_viables)} no viables.")
+
+        def _fmt_val(x):
+            return f"{x*100:.2f}%" if var == 'tasa' else f"{x:,.0f}"
+
+        if viables:
+            mejor = max(viables, key=lambda x: x.get('van', 0))
+            lineas.append(f"  Mejor escenario: valor={_fmt_val(mejor['valor_discreto'])} → VAN=${mejor['van']:,.2f}")
+        if no_viables:
+            peor = min(no_viables, key=lambda x: x.get('van', 0))
+            lineas.append(f"  Peor escenario: valor={_fmt_val(peor['valor_discreto'])} → VAN=${peor['van']:,.2f}")
+
+        # Buscar punto de cruce
+        filas = filas_con_van
+        for i in range(len(filas) - 1):
+            v1 = filas[i].get('van', 0) or 0
+            v2 = filas[i + 1].get('van', 0) or 0
+            if v1 * v2 < 0:
+                d1 = filas[i]['valor_discreto']
+                d2 = filas[i + 1]['valor_discreto']
+                cruce = d1 + (d2 - d1) * abs(v1) / (abs(v1) + abs(v2))
+                if var == 'tasa':
+                    lineas.append(f"  Punto de equilibrio estimado: {var} ≈ {cruce*100:.2f}%")
+                else:
+                    lineas.append(f"  Punto de equilibrio estimado: {var} ≈ {cruce:,.0f}")
+                break
+
+    elif tipo == 'convertible':
+        dils = [f['dilucion_pct'] for f in filas]
+        owns = [f['ownership_fundador'] for f in filas]
+        min_own = min(owns)
+        max_own = max(owns)
+        lineas.append(f"  Dilución varía entre {min(dils):.2f}% y {max(dils):.2f}%.")
+        lineas.append(f"  Participación del fundador: {min_own:.2f}% – {max_own:.2f}%.")
+        if min_own < 65:
+            lineas.append(f"  ALERTA: en el escenario más dilutivo, el fundador baja de 65% ({min_own:.2f}%).")
+        else:
+            lineas.append(f"  El fundador mantiene al menos {min_own:.2f}% en todos los escenarios.")
+
+    elif tipo == 'valor_terminal':
+        vts = [f['valor_terminal'] for f in filas if f.get('valor_terminal') is not None]
+        if vts:
+            lineas.append(f"  Rango de valor terminal: ${min(vts):,.0f} – ${max(vts):,.0f}")
+            if len(vts) >= 2:
+                ratio = max(vts) / min(vts) if min(vts) > 0 else float('inf')
+                lineas.append(f"  El valor máximo es {ratio:.1f}x el mínimo.")
+
+    elif tipo == 'capital_trabajo':
+        ciclos = [f['ciclo_caja'] for f in filas]
+        lineas.append(f"  Ciclo de caja varía entre {min(ciclos):.0f} y {max(ciclos):.0f} días.")
+        # Encontrar máximo tolerable (ciclo < 60)
+        tolerables = [f for f in filas if f['ciclo_caja'] < 60]
+        if tolerables:
+            max_val = max(f['valor_discreto'] for f in tolerables)
+            lineas.append(f"  Máximo tolerable de '{var}': {max_val:.0f} días (ciclo < 60 días).")
+
+    elif tipo == 'runway':
+        sostenibles = [f for f in filas if f.get('viable')]
+        no_sost = [f for f in filas if not f.get('viable')]
+        if sostenibles:
+            lineas.append(f"  Sostenible en {len(sostenibles)} de {len(filas)} escenarios.")
+        if no_sost:
+            meses_list = [f.get('meses', 0) for f in no_sost if f.get('meses')]
+            if meses_list:
+                lineas.append(f"  En escenarios no sostenibles: {min(meses_list)}–{max(meses_list)} meses de runway.")
+
+    elif tipo == 'credito':
+        cuotas = [f['cuota'] for f in filas]
+        lineas.append(f"  Cuota varía entre ${min(cuotas):,.2f} y ${max(cuotas):,.2f}.")
+        totales = [f['total_pagado'] for f in filas]
+        lineas.append(f"  Total pagado varía entre ${min(totales):,.2f} y ${max(totales):,.2f}.")
 
     return lineas

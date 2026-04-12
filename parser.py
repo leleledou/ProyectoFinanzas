@@ -21,7 +21,8 @@ TIPOS = {
     },
     'interes_simple': {
         'nombre': 'Interés Simple',
-        'keywords': ['interés simple', 'interes simple'],
+        'keywords': ['interés simple', 'interes simple',
+                     'simple anual', 'tasa simple'],
         'peso': 5,
     },
     'interes_compuesto': {
@@ -29,8 +30,9 @@ TIPOS = {
         'keywords': [
             'interés compuesto', 'interes compuesto',
             'capitalización', 'capitalizacion', 'capitaliza',
+            'compuesto',
         ],
-        'peso': 5,
+        'peso': 7,
     },
     'runway': {
         'nombre': 'Runway / Supervivencia',
@@ -38,6 +40,8 @@ TIPOS = {
             'runway', 'supervivencia', 'burn rate', 'gasto mensual', 'saldo inicial',
             'cuánto tiempo', 'cuanto tiempo', 'cuántos meses', 'cuantos meses',
             'sobrevivir', 'aguantar', 'quedarse sin dinero', 'quedarse sin caja',
+            'meses de vida', 'meses le quedan', 'meses de operación',
+            'caja disponible', 'efectivo disponible',
         ],
         'peso': 3,
     },
@@ -47,6 +51,11 @@ TIPOS = {
             'capital de trabajo', 'ciclo de caja', 'ciclo operativo',
             'días de cobro', 'dias de cobro', 'días de inventario', 'dias de inventario',
             'días de pago', 'dias de pago', 'ciclo de conversión', 'ciclo de conversion',
+            'ciclo de efectivo', 'ciclo de conversión de efectivo',
+            'rotación de inventario', 'rotacion de inventario',
+            'plazo de cobro', 'plazo de pago',
+            'cobra en', 'paga en', 'inventario de',
+            'cobro', 'inventario', 'proveedores',
         ],
         'peso': 4,
     },
@@ -56,15 +65,21 @@ TIPOS = {
             'préstamo', 'prestamo', 'crédito', 'credito', 'cuota mensual',
             'amortización', 'amortizacion', 'financiamiento', 'hipoteca',
             'tabla de amortización', 'sistema francés', 'sistema frances',
+            'línea de crédito', 'linea de credito', 'cuotas mensuales',
+            'pago mensual', 'pagos mensuales',
+            'revolving', 'línea revolving', 'linea revolving',
         ],
         'peso': 3,
     },
     'convertible': {
         'nombre': 'Nota Convertible',
         'keywords': [
-            'nota convertible', 'convertible', 'valuation cap', 'dilución del fundador',
-            'dilucion del fundador', 'ronda de inversión', 'ronda serie',
+            'nota convertible', 'convertible note', 'valuation cap',
+            'dilución del fundador', 'dilucion del fundador',
+            'ronda de inversión', 'ronda serie', 'safe',
             'descuento de conversión', 'descuento de conversion',
+            'cap de valoración', 'cap de valoracion',
+            'pre-money', 'post-money', 'pre money', 'post money',
         ],
         'peso': 4,
     },
@@ -73,7 +88,8 @@ TIPOS = {
         'keywords': [
             'valor terminal', 'valor residual', 'perpetuidad', 'gordon',
             'múltiplo de salida', 'multiplo de salida', 'exit multiple',
-            'tasa de crecimiento perpetuo',
+            'tasa de crecimiento perpetuo', 'valor de salida',
+            'múltiplo ebitda', 'multiplo ebitda', 'enterprise value',
         ],
         'peso': 4,
     },
@@ -88,14 +104,17 @@ CONTEXTO_MAP: List[Tuple[List[str], str, Optional[str]]] = [
       'capital inicial', 'monto de la inversión', 'monto de la inversion',
       'inversión de', 'inversion de', 'invertir en', 'costo del proyecto',
       'precio del proyecto', 'invierto', 'invertimos', 'invertiré', 'se invierte',
-      'inversión es', 'inversion es', 'cuesta', 'vale'], 'inversion', None),
+      'inversión es', 'inversion es', 'cuesta', 'vale',
+      'invierte', 'invirtió', 'invirtio'], 'inversion', None),
 
     # Tasa de descuento / interés (porcentaje) — poner primero y con frases largas
     (['tasa de descuento del', 'tasa de descuento de', 'tasa de descuento es',
       'tasa de descuento', 'tasa de interés del', 'tasa de interés de',
       'tasa de interes del', 'tasa de interes de', 'tasa de interés es', 'tasa de interes es',
       'tasa anual de', 'tasa anual del', 'tasa anual es', 'costo de capital de', 'costo de capital es',
-      'wacc de', 'wacc es', 'tasa de rendimiento', 'tasa del', 'tasa de'], 'tasa', 'pct'),
+      'wacc de', 'wacc es', 'tasa de rendimiento', 'tasa del', 'tasa de',
+      'costo de oportunidad de', 'costo de oportunidad del',
+      'rendimiento esperado de'], 'tasa', 'pct'),
 
     # Flujos de caja — incluye formas verbales
     (['flujo de caja de', 'flujos de caja de', 'flujo anual de', 'flujos anuales de',
@@ -104,13 +123,15 @@ CONTEXTO_MAP: List[Tuple[List[str], str, Optional[str]]] = [
       'recibo', 'recibiré', 'recibimos', 'recibe', 'recibir',
       'retorno anual de', 'flujo periódico de', 'flujo periodico de',
       'gana', 'ganaremos', 'produce', 'producirá',
-      'flujos de', 'flujo de'], 'flujo', None),
+      'flujos de', 'flujo de', 'cash flow de',
+      'flujo año', 'flujo del año'], 'flujo', None),
 
     # Períodos / años
     (['durante', 'por un plazo de', 'en un plazo de', 'plazo de',
       'horizonte de', 'en un período de', 'en un periodo de',
       'durante un período de', 'durante un periodo de',
-      'anuales por', 'mensuales por'], 'periodos', None),
+      'anuales por', 'mensuales por', 'a lo largo de',
+      'horizonte de evaluación de', 'horizonte de evaluacion de'], 'periodos', None),
 
     # Capital (interés simple/compuesto)
     (['capital de', 'depositar', 'depósito de', 'deposito de',
@@ -124,11 +145,16 @@ CONTEXTO_MAP: List[Tuple[List[str], str, Optional[str]]] = [
     # Runway: saldo
     (['saldo inicial de', 'saldo de caja de', 'caja disponible de',
       'cuenta con', 'tiene disponible', 'capital disponible de',
-      'tiene en caja', 'saldo de'], 'saldo', None),
+      'tiene en caja', 'saldo de', 'efectivo de',
+      'efectivo disponible de', 'cash de',
+      'caja inicial'], 'saldo', None),
 
     # Runway: gasto mensual
     (['gasto mensual de', 'gastos mensuales de', 'costo mensual de',
-      'burn rate de', 'egresos mensuales de', 'erogación mensual de'], 'gasto_mensual', None),
+      'burn rate de', 'egresos mensuales de', 'erogación mensual de',
+      'gasta mensualmente', 'costo operativo mensual de',
+      'costos fijos mensuales de',
+      'burn mensual'], 'gasto_mensual', None),
 
     # Runway: ingreso mensual
     (['ingreso mensual de', 'ingresos mensuales de',
@@ -138,57 +164,89 @@ CONTEXTO_MAP: List[Tuple[List[str], str, Optional[str]]] = [
       'ingresos proyectados', 'ingreso proyectado',
       'ingresos mensuales', 'ingreso mensual',
       'recibe mensualmente', 'cobra mensualmente',
-      'vende mensualmente'], 'ingreso_mensual', None),
+      'vende mensualmente', 'factura mensualmente',
+      'venta mensual de', 'ventas mensuales de'], 'ingreso_mensual', None),
 
     # Runway: tasa de caída
     (['tasa de caída', 'tasa de caida', 'caída mensual de', 'caida mensual de',
-      'decrecimiento mensual de'], 'tasa_caida', 'pct'),
+      'decrecimiento mensual de', 'caen un', 'bajan un',
+      'disminuyen un', 'decrecen un'], 'tasa_caida', 'pct'),
+
+    # Crédito: monto del préstamo
+    (['monto del préstamo', 'monto del prestamo', 'monto del crédito',
+      'monto del credito', 'préstamo de', 'prestamo de',
+      'crédito de', 'credito de', 'financiamiento de',
+      'línea de crédito de', 'linea de credito de'], 'monto', None),
 
     # Crédito: cuotas
     (['número de cuotas', 'numero de cuotas', 'cantidad de cuotas',
       'en cuotas', 'en meses', 'plazo en meses', 'plazo de cuotas',
-      'cuotas mensuales de'], 'num_cuotas', None),
+      'cuotas mensuales de', 'pagos mensuales de',
+      'plazo de'], 'num_cuotas', None),
 
     # Capital de trabajo: días de cobro
     (['días de cobro', 'dias de cobro', 'plazo de cobro de',
       'días en cobrar', 'dias en cobrar', 'período de cobro de',
-      'periodo de cobro de'], 'dias_cobro', None),
+      'periodo de cobro de', 'cobra en', 'demora en cobrar',
+      'tarda en cobrar', 'ciclo de cobro de',
+      'cobro de', 'cobro en', 'cobrar en'], 'dias_cobro', None),
 
     # Capital de trabajo: días de inventario
     (['días de inventario', 'dias de inventario', 'rotación de inventario de',
-      'días en inventario', 'dias en inventario'], 'dias_inventario', None),
+      'días en inventario', 'dias en inventario',
+      'inventario de', 'inventario', 'almacena durante'], 'dias_inventario', None),
 
     # Capital de trabajo: días de pago
     (['días de pago', 'dias de pago', 'plazo de pago de',
       'días para pagar', 'dias para pagar', 'crédito de proveedores de',
-      'credito de proveedores de'], 'dias_pago', None),
+      'credito de proveedores de', 'paga a proveedores en',
+      'paga proveedores en', 'paga en', 'proveedores en',
+      'plazo con proveedores de',
+      'proveedores pagan'], 'dias_pago', None),
 
     # Capital de trabajo: costo diario
-    (['costo diario de', 'egresos diarios de', 'costo promedio diario de',
-      'gasto diario de'], 'costo_diario', None),
+    (['costo diario de', 'costo diario', 'egresos diarios de',
+      'costo promedio diario de', 'costo promedio diario',
+      'gasto diario de', 'gasto diario',
+      'operación diaria de'], 'costo_diario', None),
 
     # Nota convertible
     (['valuation cap de', 'valuation cap es', 'cap de valoración de',
       'cap de valoracion de', 'cap de', 'límite de valoración de',
-      'limite de valoracion de'], 'valuation_cap', None),
+      'limite de valoracion de', 'valuation cap',
+      'valoración cap', 'valoracion cap'], 'valuation_cap', None),
     (['valoración pre-money de', 'valoracion pre-money de',
       'valoración pre de', 'valoracion pre de',
       'pre-money de', 'valoración de la empresa de',
-      'valoracion de la empresa de'], 'valoracion_pre', None),
+      'valoracion de la empresa de', 'pre-money es',
+      'valoración pre-money', 'valoracion pre-money',
+      'valoración de la ronda', 'valoracion de la ronda'], 'valoracion_pre', None),
     (['descuento de conversión de', 'descuento de conversion de',
-      'con un descuento de', 'descuento de conversión', 'descuento de conversion'], 'descuento_pct', None),
+      'con un descuento de', 'descuento de conversión', 'descuento de conversion',
+      'descuento del', 'descuento de'], 'descuento_pct', 'pct'),
 
     # Valor terminal
     (['tasa de crecimiento de', 'tasa de crecimiento es',
-      'tasa g de', 'crecimiento perpetuo de'], 'tasa_crecimiento', 'pct'),
-    (['múltiplo de', 'multiplo de', 'exit multiple de',
-      'múltiplo de salida de', 'multiplo de salida de'], 'multiplo', None),
+      'tasa de crecimiento perpetuo de', 'tasa de crecimiento perpetuo',
+      'tasa de crecimiento', 'crecimiento perpetuo de',
+      'crecimiento de', 'crecimiento del', 'crecimiento',
+      'tasa g de', 'crece al',
+      'g =', 'g='], 'tasa_crecimiento', 'pct'),
+    (['múltiplo de salida de', 'multiplo de salida de',
+      'múltiplo de', 'multiplo de', 'exit multiple de',
+      'múltiplo ebitda de', 'multiplo ebitda de',
+      'múltiplo de salida', 'multiplo de salida'], 'multiplo', None),
     (['flujo del último año', 'flujo final de', 'flujo del año n de',
-      'fcf final de', 'flujo del último período de'], 'flujo_final', None),
+      'fcf final de', 'flujo del último período de',
+      'último flujo de', 'ultimo flujo de',
+      'ebitda del último año', 'ebitda final de',
+      'flujo del último año de', 'flujo terminal de'], 'flujo_final', None),
 
     # Ingresos / costos genéricos (para sensibilidad)
-    (['ingresos de', 'ingreso de', 'ventas de'], 'ingresos', None),
-    (['costos de', 'costo de', 'gastos de', 'gasto de'], 'costos', None),
+    (['ingresos de', 'ingreso de', 'ventas de',
+      'revenue de', 'facturación de', 'facturacion de'], 'ingresos', None),
+    (['costos de', 'costo de', 'gastos de', 'gasto de',
+      'costos operativos de', 'costos fijos de'], 'costos', None),
 ]
 
 # ─── Palabras clave de sensibilidad ──────────────────────────
@@ -198,16 +256,38 @@ KEYWORDS_SENSIBILIDAD = [
     'si cambia', 'si aumenta', 'si disminuye', 'si baja', 'si sube',
     'qué pasa si', 'que pasa si', 'escenario pesimista', 'escenario optimista',
     'escenarios', 'impacto de', 'efecto de',
+    'qué pasaría', 'que pasaria', 'evaluar con', 'evalúa con',
+    'comparar con', 'simular con', 'rango de', 'entre valores de',
 ]
 
 # Variables que pueden ser sensibles con sus nombres canónicos
+# Orden importa: las más específicas primero para evitar falsos positivos
 VARIABLE_SENSIBILIDAD = {
-    'ingresos': ['ingreso', 'ingresos', 'ventas', 'flujos', 'flujo de caja'],
-    'costos': ['costo', 'costos', 'gasto', 'gastos', 'egresos'],
-    'tasa': ['tasa', 'tasa de descuento', 'tasa de interés', 'tasa de interes', 'wacc'],
-    'inversion': ['inversión', 'inversion', 'capital inicial'],
+    'ingreso_mensual': ['ingreso mensual', 'ingresos mensuales', 'venta mensual',
+                        'ingresos reales', 'ingresos_mensuales', 'ingresos mensuales'],
     'tasa_caida': ['tasa de caída', 'tasa de caida', 'caída de ingresos'],
+    'valuation_cap': ['valuation cap', 'cap de valoración', 'cap de valoracion',
+                      'valoración cap', 'valoracion cap', 'cap'],
+    'multiplo': ['múltiplo de salida', 'multiplo de salida', 'exit multiple',
+                 'multiple salida', 'multiple_salida',
+                 'múltiplo', 'multiplo', 'multiple'],
+    'descuento_pct': ['descuento de conversión', 'descuento de conversion', 'descuento'],
+    'dias_cobro': ['días de cobro', 'dias de cobro', 'dias cobro',
+                   'cobro', 'plazo de cobro'],
+    'flujos': ['flujo de caja', 'flujos de caja', 'flujo', 'flujos'],
+    'ingresos': ['ingresos', 'ingreso', 'ventas', 'revenue'],
+    'costos': ['costo', 'costos', 'gasto', 'gastos', 'egresos'],
+    'tasa': ['tasa de descuento', 'tasa descuento', 'tasa de interés',
+             'tasa de interes', 'wacc', 'tasa'],
+    'inversion': ['inversión', 'inversion', 'capital inicial'],
 }
+
+# Variables que se refieren a flujos de un año específico
+# Patrón: flujo_año3, flujo_a3, etc.
+PATRON_FLUJO_ANIO = re.compile(
+    r'(?:flujo|f)\s*(?:del?\s*)?(?:año|a)\s*(\d+)',
+    re.IGNORECASE
+)
 
 
 # ════════════════════════════════════════════════════════════════
@@ -251,14 +331,44 @@ def _detectar_tipo(texto_l: str) -> Tuple[str, str]:
         peso = info.get('peso', 1)
         for kw in info['keywords']:
             if kw in texto_l:
-                score += peso
+                # Keywords más largos (más específicos) valen más
+                bonus = len(kw.split()) - 1  # frases de múltiples palabras valen más
+                score += peso + bonus
         puntajes[tipo_key] = score
 
     mejor = max(puntajes, key=lambda k: puntajes[k])
+
+    # Si el mejor puntaje es 0, usar heurísticas adicionales antes de default
     if puntajes[mejor] == 0:
-        mejor = 'van_tir'  # default
+        mejor = _detectar_tipo_por_heuristica(texto_l)
 
     return mejor, TIPOS[mejor]['nombre']
+
+
+def _detectar_tipo_por_heuristica(texto_l: str) -> str:
+    """Detecta el tipo cuando no hay keywords explícitos, usando patrones."""
+    # Buscar patrones numéricos que sugieran el tipo
+    tiene_cuotas = bool(re.search(r'\d+\s*cuotas?', texto_l))
+    tiene_dias = bool(re.search(r'\d+\s*d[ií]as?', texto_l) or
+                      re.search(r'd[ií]as?\s*de\s*(cobro|pago|inventario)', texto_l) or
+                      re.search(r'cobr[ao].*\d+\s*d[ií]as?', texto_l) or
+                      re.search(r'inventario.*\d+\s*d[ií]as?', texto_l))
+    tiene_flujos_periodo = bool(re.search(r'(?:año|a)\s*\d+\s*[=:]', texto_l))
+    tiene_cap = 'cap' in texto_l or 'convertible' in texto_l
+    tiene_multiplo = bool(re.search(r'\d+\s*[xX]', texto_l))
+    tiene_runway = bool(re.search(r'(saldo|caja|efectivo).{0,30}(gasto|burn|egreso)', texto_l))
+
+    if tiene_cuotas:
+        return 'credito'
+    if tiene_dias:
+        return 'capital_trabajo'
+    if tiene_cap:
+        return 'convertible'
+    if tiene_runway:
+        return 'runway'
+    if tiene_multiplo and not tiene_flujos_periodo:
+        return 'valor_terminal'
+    return 'van_tir'  # default final
 
 
 # ════════════════════════════════════════════════════════════════
@@ -268,59 +378,79 @@ def _detectar_tipo(texto_l: str) -> Tuple[str, str]:
 def _encontrar_numeros(texto_l: str) -> List[Dict[str, Any]]:
     """
     Encuentra todos los números en el texto con su contexto.
-    Retorna lista de dicts con: valor, contexto_antes, es_pct, unidad, pos_inicio
+    Soporta: 150k, 1.5M, 4x, -50000, $100,000, 12%, etc.
     """
-    # Patrón: número con separadores opcionales de miles/decimales
     patron = re.compile(
-        r'(?<!\w)'                                  # no precedido por letra
-        r'(\$\s*)?'                                  # signo $ opcional
-        r'(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?'       # número con separadores
-        r'|\d+(?:[.,]\d+)?)'                         # o número simple
+        r'(?<!\w)'                                      # no precedido por letra/dígito
+        r'(-\s*)?'                                       # (1) signo negativo opcional
+        r'(\$\s*)?'                                      # (2) signo $ opcional
+        r'(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?'           # (3) número con separadores
+        r'|\d+(?:[.,]\d+)?)'                             # o número simple
         r'\s*'
-        r'(mil(?:lones?)?|%|años?|meses?|períodos?|periodos?|cuotas?)?'
+        r'(mil(?:lones?)?|millones?'                     # (4) unidad/sufijo
+        r'|meses?|períodos?|periodos?|cuotas?|años?|anios?'
+        r'|d[ií]as?'
+        r'|[kK]|[mM]{1,2}'
+        r'|%|[xX])?'
         r'(?!\w)',
         re.IGNORECASE
     )
 
     resultados = []
     for m in patron.finditer(texto_l):
-        raw_num = m.group(2)
-        unidad = (m.group(3) or '').strip().lower()
-        tiene_peso = bool(m.group(1))
+        signo_neg = bool(m.group(1))
+        tiene_peso = bool(m.group(2))
+        raw_num = m.group(3)
+        unidad_raw = (m.group(4) or '').strip()
+        unidad = unidad_raw.lower()
 
         valor = _parsear_numero(raw_num)
         if valor is None:
             continue
 
-        # Aplicar multiplicador de unidad
-        if unidad.startswith('millon'):
+        # Aplicar multiplicador de unidad/sufijo
+        es_multiplo = False
+        if unidad.startswith('millon') or unidad in ('m', 'mm'):
             valor *= 1_000_000
-        elif unidad == 'mil':
+        elif unidad == 'mil' or unidad == 'k':
             valor *= 1_000
+        elif unidad == 'x':
+            es_multiplo = True
+
+        # Aplicar signo negativo
+        if signo_neg:
+            valor = -valor
 
         # Determinar si es porcentaje
         es_pct = unidad == '%'
-        # También detectar "por ciento" justo después
         resto = texto_l[m.end():m.end() + 15]
         if 'por ciento' in resto or 'porciento' in resto:
             es_pct = True
 
-        # Contexto: 90 caracteres antes
+        # Contexto: 90 caracteres antes, 40 caracteres después
         inicio = m.start()
         ctx_inicio = max(0, inicio - 90)
         contexto_antes = texto_l[ctx_inicio:inicio].strip()
+        fin = m.end()
+        ctx_fin = min(len(texto_l), fin + 40)
+        contexto_despues = texto_l[fin:ctx_fin].strip()
 
-        unidades_tiempo = ('años', 'año', 'meses', 'mes',
+        unidades_tiempo = ('años', 'año', 'anios', 'anio',
+                           'meses', 'mes',
                            'períodos', 'periodos', 'período', 'periodo')
         unidades_cuota = ('cuotas', 'cuota')
+        unidades_dias = ('días', 'dias', 'día', 'dia')
 
         resultados.append({
             'valor': valor,
             'es_pct': es_pct,
+            'es_multiplo': es_multiplo,
             'unidad_tiempo': unidad in unidades_tiempo,
+            'unidad_dias': unidad in unidades_dias,
             'unidad_cuota': unidad in unidades_cuota,
             'tiene_peso': tiene_peso,
             'contexto_antes': contexto_antes,
+            'contexto_despues': contexto_despues,
             'pos': inicio,
             'raw': m.group(0),
             'unidad': unidad,
@@ -378,25 +508,55 @@ def _identificar_variable(num: Dict, tipo: str) -> Optional[str]:
     # Usar últimas 50 chars para contexto inmediato
     ctx = ctx_full[-50:] if len(ctx_full) > 50 else ctx_full
 
+    # Si es múltiplo (4x, 6x), asignar como multiplo
+    if num.get('es_multiplo'):
+        return 'multiplo'
+
     # Encontrar el keyword más cercano al número (mayor posición en ctx)
+    # Si dos keywords empatan en posición, preferir el más largo (más específico)
     mejor_pos = -1
     mejor_var = None
+    mejor_len = 0
 
     for keywords, var_name, _ in CONTEXTO_MAP:
         for kw in keywords:
             pos = ctx.rfind(kw)   # rfind = última aparición = más cercana al número
-            if pos > mejor_pos:
+            if pos > mejor_pos or (pos == mejor_pos and pos >= 0 and len(kw) > mejor_len):
                 mejor_pos = pos
                 mejor_var = var_name
+                mejor_len = len(kw)
 
-    # Heurísticas por unidad: si el número tiene unidad de tiempo/cuota,
-    # priorizar eso a menos que el contexto inmediato sea muy específico
+    # Heurísticas por unidad: si el número tiene unidad de tiempo/cuota/días
     if num['unidad_cuota']:
         return 'num_cuotas'
 
+    # Números con unidad "días" → solo relevantes para capital_trabajo
+    if num.get('unidad_dias'):
+        if tipo == 'capital_trabajo':
+            # Primero buscar en contexto completo solo para dias_*
+            for keywords, var_name, _ in CONTEXTO_MAP:
+                if not var_name.startswith('dias_'):
+                    continue
+                for kw in keywords:
+                    if kw in ctx:
+                        return var_name
+            # Buscar en contexto posterior
+            after_ctx = num.get('contexto_despues', '')
+            if any(kw in after_ctx for kw in ['crédito', 'credito', 'cobro', 'cobrar', 'cliente']):
+                return 'dias_cobro'
+            if any(kw in after_ctx for kw in ['proveedor', 'pago', 'pagar']):
+                return 'dias_pago'
+            if any(kw in after_ctx for kw in ['inventario', 'almacen', 'stock']):
+                return 'dias_inventario'
+            # Default para capital_trabajo con días: usar posición
+            return 'dias_cobro'
+        # Para otros tipos, "X días" no es una variable estándar → ignorar
+        return None
+
     if num['unidad_tiempo']:
-        # Solo usar el match de contexto si es muy cercano al número (últimos 20 chars)
-        ctx_cercano = ctx[-20:] if len(ctx) > 20 else ctx
+        # Solo usar el match de contexto si es muy cercano al número (últimos 12 chars)
+        # Esto evita que "flujos de 400k por 5 años" asigne el 5 a flujo
+        ctx_cercano = ctx[-12:] if len(ctx) > 12 else ctx
         for keywords, var_name, _ in CONTEXTO_MAP:
             if var_name == 'periodos':
                 continue
@@ -405,16 +565,32 @@ def _identificar_variable(num: Dict, tipo: str) -> Optional[str]:
                     return var_name
         return 'periodos'
 
+    # Si el número es porcentaje, priorizar variables de tipo porcentaje
+    # No permitir que un % se asigne a una variable monetaria
+    _VARS_MONETARIAS = {'inversion', 'flujo', 'capital', 'saldo', 'gasto_mensual',
+                        'ingreso_mensual', 'monto', 'valuation_cap', 'valoracion_pre',
+                        'flujo_final', 'ingresos', 'costos', 'costo_diario',
+                        '_monto_sin_contexto'}
+    _VARS_PCT = {'tasa', 'descuento_pct', 'tasa_crecimiento', 'tasa_caida'}
+
+    if num['es_pct']:
+        # Si el contexto encontró una variable de porcentaje, usarla
+        if mejor_var in _VARS_PCT:
+            return mejor_var
+        # Si no, asignar como tasa para los tipos que lo esperan
+        if tipo in ('van_tir', 'credito', 'valor_terminal',
+                    'interes_simple', 'interes_compuesto'):
+            return 'tasa'
+        if tipo == 'convertible':
+            return 'descuento_pct'
+        return mejor_var
+
     if mejor_var is not None:
         return mejor_var
 
-    if num['es_pct'] and tipo in ('van_tir', 'credito', 'valor_terminal',
-                                   'interes_simple', 'interes_compuesto'):
-        return 'tasa'
-
     # Números monetarios sin contexto → asignación posicional posterior
     valor = num['valor']
-    if num['tiene_peso'] or (valor >= 100 and not num['es_pct']):
+    if num['tiene_peso'] or (abs(valor) >= 100 and not num['es_pct']):
         return '_monto_sin_contexto'
 
     return None
@@ -436,6 +612,7 @@ def _extraer_variables(texto_l: str, tipo: str) -> Dict[str, Any]:
     montos_sin_ctx: List[float] = []
 
     # Detectar flujos explícitos por año: "año 1: X, año 2: Y, ..."
+    # o "A1=25k, A2=35k, A3=45k"
     flujos_explicitos = _extraer_flujos_por_periodo(texto_l)
     if flujos_explicitos:
         variables['flujos'] = flujos_explicitos
@@ -510,8 +687,8 @@ def _extraer_variables(texto_l: str, tipo: str) -> Dict[str, Any]:
             if 'valuation_cap' not in variables and montos_sin_ctx:
                 variables['valuation_cap'] = montos_sin_ctx[0]
                 montos_sin_ctx = montos_sin_ctx[1:]
-            if 'valoracion_pre' not in variables and montos_sin_ctx:
-                variables['valoracion_pre'] = montos_sin_ctx[0]
+            # No asignar valoracion_pre por posición — se contamina con valores
+            # de sensibilidad. Si falta, motor.py lo defaultea a valuation_cap.
 
         elif tipo == 'valor_terminal':
             if 'flujo_final' not in variables:
@@ -533,17 +710,39 @@ def _extraer_variables(texto_l: str, tipo: str) -> Dict[str, Any]:
     if 'tasa' in variables and variables['tasa'] > 1:
         variables['tasa'] = variables['tasa'] / 100
 
+    # Normalizar descuento_pct: si ya vino como decimal (0.20) dejarlo como está
+    # Si vino como entero (20) ya fue dividido por 100 en la extracción
+
+    # Para interés: convertir meses a años si periodos viene de "X meses"
+    if tipo in ('interes_simple', 'interes_compuesto') and 'periodos' in variables:
+        if re.search(r'\b\d+\s*meses?\b', texto_l) and variables['periodos'] >= 12:
+            variables['periodos'] = variables['periodos'] / 12
+
+    # Para interés compuesto: detectar tasas separadas de simple y compuesto
+    if tipo == 'interes_compuesto':
+        m_comp = re.search(r'(\d+(?:\.\d+)?)\s*%\s*(?:anual\s+)?compuesto', texto_l)
+        if m_comp:
+            variables['tasa'] = float(m_comp.group(1)) / 100
+        m_simp = re.search(r'(\d+(?:\.\d+)?)\s*%\s*(?:anual\s+)?simple', texto_l)
+        if m_simp:
+            variables['tasa_simple_ref'] = float(m_simp.group(1)) / 100
+
     return variables
 
 
 def _extraer_flujos_por_periodo(texto_l: str) -> Optional[List[float]]:
     """
-    Detecta patrones como 'año 1: $X, año 2: $Y' o 'período 1: X'.
-    Retorna lista ordenada de flujos o None si no encuentra el patrón.
+    Detecta patrones de flujos etiquetados por período:
+    - 'año 1: $25k, año 2: $35k'
+    - 'A1=25k, A2=35k, A3=45k'
+    - 'F1=25000, F2=30000'
+    - 'período 1: 25000, período 2: 30000'
     """
+    # Patrón ampliado: soporta año/periodo/A/F + número + separador + valor con sufijo
+    # (?<!\w) evita que "a" dentro de palabras como "oferta" coincida
     patron = re.compile(
-        r'(?:año|periodo|período|mes)\s+(\d+)\s*[:\-]\s*\$?\s*([\d.,]+)'
-        r'(?:\s*(?:mil(?:lones?)?)?)',
+        r'(?<!\w)(?:año|periodo|período|mes|a|f)\s*(\d+)\s*[:\-=]\s*'
+        r'(-?\s*\$?\s*[\d.,]+)\s*([kKmM]{1,2}|mil(?:lones?)?)?',
         re.IGNORECASE
     )
     matches = patron.findall(texto_l)
@@ -551,10 +750,29 @@ def _extraer_flujos_por_periodo(texto_l: str) -> Optional[List[float]]:
         return None
 
     try:
-        pares = sorted([(int(p), _parsear_numero(v)) for p, v in matches])
-        return [v for _, v in pares if v is not None]
+        pares = []
+        for periodo_str, valor_str, sufijo in matches:
+            valor = _parsear_numero(valor_str.replace('$', '').replace(' ', ''))
+            if valor is None:
+                continue
+            sufijo_l = sufijo.lower().strip()
+            if sufijo_l == 'k':
+                valor *= 1_000
+            elif sufijo_l in ('m', 'mm') or sufijo_l.startswith('millon'):
+                valor *= 1_000_000
+            elif sufijo_l == 'mil':
+                valor *= 1_000
+            # Manejar signo negativo en el valor
+            if valor_str.strip().startswith('-'):
+                valor = -abs(valor)
+            pares.append((int(periodo_str), valor))
+        pares.sort()
+        if pares:
+            return [v for _, v in pares]
     except Exception:
-        return None
+        pass
+
+    return None
 
 
 # ════════════════════════════════════════════════════════════════
@@ -565,7 +783,7 @@ def _detectar_sensibilidad(texto_l: str, tipo: str,
                             variables: Dict) -> Optional[Dict]:
     """
     Detecta si se solicita análisis de sensibilidad.
-    Retorna dict con variable_sensible, variaciones, o None.
+    Retorna dict con variable_sensible, variaciones porcentuales o discretas.
     """
     # Verificar si hay keywords de sensibilidad
     hay_kw = any(kw in texto_l for kw in KEYWORDS_SENSIBILIDAD)
@@ -578,7 +796,23 @@ def _detectar_sensibilidad(texto_l: str, tipo: str,
     # Detectar variable sensible mencionada explícitamente
     var_sensible = _detectar_variable_sensible(texto_l, tipo, variables)
 
-    # Detectar variaciones porcentuales mencionadas
+    # Detectar si se pide sensibilidad sobre un flujo de año específico
+    flujo_anio = _detectar_flujo_anio_sensible(texto_l.replace('_', ' '))
+
+    # Intentar detectar escenarios discretos primero
+    valores_discretos = _detectar_escenarios_discretos(texto_l)
+
+    # Si hay valores discretos, usarlos
+    if valores_discretos:
+        return {
+            'variable': var_sensible,
+            'variaciones_pct': None,
+            'valores_discretos': valores_discretos,
+            'flujo_anio': flujo_anio,
+            'explicita': hay_kw,
+        }
+
+    # Si no, usar variaciones porcentuales
     variaciones = _detectar_variaciones(texto_l)
     if not variaciones:
         variaciones = [-30, -20, -10, 0, 10, 20, 30]  # default
@@ -586,6 +820,8 @@ def _detectar_sensibilidad(texto_l: str, tipo: str,
     return {
         'variable': var_sensible,
         'variaciones_pct': variaciones,
+        'valores_discretos': None,
+        'flujo_anio': flujo_anio,
         'explicita': hay_kw,
     }
 
@@ -593,22 +829,42 @@ def _detectar_sensibilidad(texto_l: str, tipo: str,
 def _detectar_variable_sensible(texto_l: str, tipo: str,
                                   variables: Dict) -> str:
     """Identifica qué variable se quiere variar."""
+    # Normalizar underscores → espacios para coincidencia
+    texto_norm = texto_l.replace('_', ' ')
+
     for var_canon, aliases in VARIABLE_SENSIBILIDAD.items():
         for alias in aliases:
-            # Buscar "sensibilidad a X" o "si X cambia" etc.
+            alias_norm = alias.replace('_', ' ')
+            # Buscar "sensibilidad a X", "escenarios de X", "si X cambia" etc.
             patrones_ctx = [
-                f'sensibilidad a {alias}', f'sensibilidad de {alias}',
-                f'sensible a {alias}', f'si {alias}', f'variar {alias}',
-                f'variando {alias}', f'impacto de {alias}',
+                f'sensibilidad a {alias_norm}', f'sensibilidad de {alias_norm}',
+                f'sensibilidad del {alias_norm}', f'sensibilidad en {alias_norm}',
+                f'sensible a {alias_norm}', f'sensible: {alias_norm}',
+                f'sensibles: {alias_norm}',
+                f'variable sensible: {alias_norm}',
+                f'si {alias_norm}', f'variar {alias_norm}',
+                f'variando {alias_norm}', f'impacto de {alias_norm}',
+                f'impacto del {alias_norm}', f'efecto de {alias_norm}',
+                f'efecto del {alias_norm}',
+                f'escenarios de {alias_norm}', f'escenarios del {alias_norm}',
+                f'valores de {alias_norm}', f'valores del {alias_norm}',
+                f'con {alias_norm} de', f'evaluar {alias_norm}',
             ]
             for p in patrones_ctx:
-                if p in texto_l:
+                if p in texto_norm:
+                    # Remap genérico a tipo-específico
+                    if var_canon == 'ingresos' and tipo == 'runway':
+                        return 'ingreso_mensual'
                     return var_canon
+
+    # Detectar referencia a flujo de año específico
+    if PATRON_FLUJO_ANIO.search(texto_norm):
+        return 'flujos'
 
     # Default por tipo
     defaults = {
         'van_tir': 'flujos',
-        'runway': 'tasa_caida',
+        'runway': 'ingreso_mensual',
         'credito': 'tasa',
         'interes_simple': 'tasa',
         'interes_compuesto': 'tasa',
@@ -617,6 +873,104 @@ def _detectar_variable_sensible(texto_l: str, tipo: str,
         'convertible': 'descuento_pct',
     }
     return defaults.get(tipo, 'flujos')
+
+
+def _detectar_flujo_anio_sensible(texto_l: str) -> Optional[int]:
+    """
+    Detecta si se quiere variar un flujo de un año específico.
+    Ej: 'sensibilidad del flujo del año 3' → retorna 3
+    """
+    m = PATRON_FLUJO_ANIO.search(texto_l)
+    if m:
+        return int(m.group(1))
+    return None
+
+
+def _son_factores_pct(valores: List[float]) -> bool:
+    """Detecta si una lista de valores son factores porcentuales (ej: 0.6, 0.8, 1.0, 1.2)."""
+    if not valores:
+        return False
+    # Son factores si todos están entre 0.1 y 2.0 y contienen 1.0
+    todos_en_rango = all(0.1 <= v <= 2.0 for v in valores)
+    contiene_uno = any(abs(v - 1.0) < 0.001 for v in valores)
+    return todos_en_rango and contiene_uno
+
+
+def _detectar_escenarios_discretos(texto_l: str) -> Optional[List[float]]:
+    """
+    Detecta listas de valores discretos para sensibilidad.
+    Busca patrones como:
+    - 'escenarios de 90k, 110k, 130k, 150k'
+    - '(90000, 110000, 130000, 150000)'
+    - 'valores: 12%, 18%, 24%, 30%'
+    - 'con cap de 1.5M, 2M, 2.5M'
+    - 'múltiplos de 4x, 6x, 8x, 10x'
+    """
+    # Buscar listas entre paréntesis
+    for m in re.finditer(r'\(([^)]+)\)', texto_l):
+        valores = _parsear_lista_valores(m.group(1))
+        if valores and len(valores) >= 3:
+            if not _son_factores_pct(valores):
+                return valores
+
+    # Buscar después de keywords de escenarios
+    patrones_kw = [
+        r'(?:escenarios?|valores?|opciones?|niveles?|rango)\s*(?:de|:)\s*(.+?)(?:\.|;|$)',
+        r'(?:con|entre)\s+(?:cap|múltiplo|multiplo|tasa|descuento)\s*(?:de|:)?\s*(.+?)(?:\.|;|$)',
+    ]
+
+    for pat in patrones_kw:
+        for m in re.finditer(pat, texto_l, re.IGNORECASE):
+            valores = _parsear_lista_valores(m.group(1))
+            if valores and len(valores) >= 3:
+                if not _son_factores_pct(valores):
+                    return valores
+
+    # Buscar listas de múltiplos: "4x, 6x, 8x, 10x"
+    mult_pattern = re.findall(r'(\d+(?:\.\d+)?)\s*[xX]', texto_l)
+    if len(mult_pattern) >= 3:
+        return [float(v) for v in mult_pattern]
+
+    return None
+
+
+def _parsear_lista_valores(texto: str) -> Optional[List[float]]:
+    """
+    Parsea una cadena con valores separados por comas.
+    Soporta sufijos k, M, %, x.
+    Retorna lista de valores float o None.
+    """
+    # Encontrar todos los números con posibles sufijos
+    patron = re.compile(
+        r'(-?\s*\$?\s*[\d.,]+)\s*([kKmM]{1,2}|mil(?:lones?)?|%|[xX])?'
+    )
+    matches = patron.findall(texto)
+    if len(matches) < 2:
+        return None
+
+    valores = []
+    es_pct = False
+    for val_str, sufijo in matches:
+        val = _parsear_numero(val_str.replace('$', '').replace(' ', ''))
+        if val is None:
+            continue
+        sufijo_l = sufijo.lower().strip()
+        if sufijo_l == 'k':
+            val *= 1_000
+        elif sufijo_l in ('m', 'mm') or sufijo_l.startswith('millon'):
+            val *= 1_000_000
+        elif sufijo_l == 'mil':
+            val *= 1_000
+        elif sufijo_l == '%':
+            es_pct = True
+        # x suffix: mantener valor como está (es un múltiplo)
+        valores.append(val)
+
+    if not valores:
+        return None
+    if es_pct:
+        valores = [v / 100 for v in valores]
+    return valores
 
 
 def _detectar_variaciones(texto_l: str) -> Optional[List[float]]:

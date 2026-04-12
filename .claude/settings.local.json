@@ -3,7 +3,9 @@
     "allow": [
       "Bash(python -c ':*)",
       "Bash(python main.py)",
-      "Bash(python main.py:*)"
+      "Bash(python main.py:*)",
+      "Bash(python test_casos.py)",
+      "Bash(python test_full.py)"
     ]
   }
 }

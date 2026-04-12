@@ -96,10 +96,11 @@ def _calcular_interes_compuesto(v: Dict, posibles: List[str]) -> Dict:
 
     monto, interes = calcular_interes_compuesto(capital, tasa, periodos, caps)
 
-    # Comparar con simple para mostrar diferencia
-    monto_s, interes_s = calcular_interes_simple(capital, tasa, periodos)
+    # Comparar con simple (usa tasa_simple_ref si hay tasa diferente para simple)
+    tasa_simple = v.get('tasa_simple_ref', tasa)
+    monto_s, interes_s = calcular_interes_simple(capital, tasa_simple, periodos)
 
-    return {
+    res = {
         'capital': capital,
         'tasa': tasa,
         'periodos': periodos,
@@ -110,6 +111,10 @@ def _calcular_interes_compuesto(v: Dict, posibles: List[str]) -> Dict:
         'diferencia_vs_simple': interes - interes_s,
         'monto_simple_ref': monto_s,
     }
+    if 'tasa_simple_ref' in v:
+        res['tasa_simple_ref'] = tasa_simple
+        res['interes_simple_ref'] = interes_s
+    return res
 
 
 # ─── Runway ──────────────────────────────────────────────────
@@ -192,7 +197,7 @@ def _calcular_credito(v: Dict, posibles: List[str]) -> Dict:
 def _calcular_convertible(v: Dict, posibles: List[str]) -> Dict:
     inv = v.get('inversion', 0)
     cap = v.get('valuation_cap', 0)
-    val_pre = v.get('valoracion_pre', 0)
+    val_pre = v.get('valoracion_pre', cap)  # default a valuation_cap si falta
     desc_pct = v.get('descuento_pct', 0)
 
     # descuento_pct ya viene como fracción (ej: 0.20)

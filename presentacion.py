@@ -134,6 +134,29 @@ def mostrar_van_tir(res: dict):
 def mostrar_interes(res: dict, tipo: str):
     titulo = "RESULTADOS — INTERÉS COMPUESTO" if tipo == 'interes_compuesto' else "RESULTADOS — INTERÉS SIMPLE"
     caps = res.get('capitalizaciones', 1)
+    tasa_simp_ref = res.get('tasa_simple_ref')
+
+    # Si hay comparación explícita (tasas diferentes para simple vs compuesto)
+    if tipo == 'interes_compuesto' and tasa_simp_ref and abs(tasa_simp_ref - res['tasa']) > 0.001:
+        titulo = "RESULTADOS — SIMPLE vs COMPUESTO"
+        monto_s = res.get('monto_simple_ref', 0)
+        interes_s = res.get('interes_simple_ref', 0)
+        lineas = [
+            f"Capital inicial:       {fmt_moneda(res['capital'])}",
+            f"Plazo:                 {res['periodos']:.0f} años",
+            "",
+            f"--- Interés SIMPLE ({fmt_pct(tasa_simp_ref)}) ---",
+            f"Monto final:           {fmt_moneda(monto_s)}",
+            f"Interés total:         {fmt_moneda(interes_s)}",
+            "",
+            f"--- Interés COMPUESTO ({fmt_pct(res['tasa'])}) ---",
+            f"Monto final:           {fmt_moneda(res['monto_final'])}",
+            f"Interés total:         {fmt_moneda(res['interes_total'])}",
+            "",
+            f"Diferencia:            {fmt_moneda(monto_s - res['monto_final'])}",
+        ]
+        caja(titulo, lineas)
+        return
 
     lineas = [
         f"Capital inicial:       {fmt_moneda(res['capital'])}",
@@ -307,9 +330,30 @@ def mostrar_sensibilidad(sens: dict, tipo: str):
 
     var = sens['variable']
     filas = sens['variaciones']
-    seccion(f"Análisis de Sensibilidad — Variable: {var}")
+    es_discreto = sens.get('es_discreto', False)
 
-    # Determinar la métrica principal a mostrar
+    if es_discreto:
+        seccion(f"Sensibilidad Discreta — Variable: {var}")
+    else:
+        seccion(f"Análisis de Sensibilidad — Variable: {var}")
+
+    # Si es discreto, usar los displays discretos
+    if es_discreto:
+        if tipo == 'van_tir':
+            _mostrar_disc_van(filas)
+        elif tipo == 'valor_terminal':
+            _mostrar_disc_vt(filas)
+        elif tipo == 'convertible':
+            _mostrar_disc_convertible(filas)
+        elif tipo == 'capital_trabajo':
+            _mostrar_disc_capital_trabajo(filas)
+        elif tipo == 'credito':
+            _mostrar_disc_credito(filas)
+        elif tipo == 'runway':
+            _mostrar_disc_runway(filas)
+        return
+
+    # Sensibilidad porcentual clásica
     if tipo == 'van_tir':
         _mostrar_sens_van(filas)
     elif tipo == 'runway':
@@ -320,6 +364,10 @@ def mostrar_sensibilidad(sens: dict, tipo: str):
         _mostrar_sens_credito(filas)
     elif tipo == 'valor_terminal':
         _mostrar_sens_vt(filas)
+    elif tipo == 'capital_trabajo':
+        _mostrar_sens_capital_trabajo(filas)
+    elif tipo == 'convertible':
+        _mostrar_sens_convertible(filas)
 
 
 def _mostrar_sens_van(filas: list):
@@ -430,9 +478,14 @@ def mostrar_variables_detectadas(variables: dict):
     for k, v in variables.items():
         if k == 'flujos' and isinstance(v, list):
             lineas.append(f"  Flujos detectados: {len(v)} período(s)")
-            if len(v) <= 5:
+            if len(v) <= 8:
                 for i, f in enumerate(v, 1):
                     lineas.append(f"    Período {i}: ${f:,.2f}")
+            else:
+                for i in range(3):
+                    lineas.append(f"    Período {i+1}: ${v[i]:,.2f}")
+                lineas.append(f"    ...")
+                lineas.append(f"    Período {len(v)}: ${v[-1]:,.2f}")
         elif k in _VARS_PCT and isinstance(v, float):
             lineas.append(f"  {nombre_legible(k)}: {v*100:.2f}%")
         elif k in _VARS_ENTERAS and isinstance(v, float):
@@ -443,3 +496,138 @@ def mostrar_variables_detectadas(variables: dict):
             lineas.append(f"  {nombre_legible(k)}: {v}")
     if lineas:
         caja("DATOS DETECTADOS EN EL TEXTO", lineas)
+
+
+# ─── Display: Sensibilidad discreta ────────────────────────
+
+def _mostrar_disc_van(filas: list):
+    vans = [f['van'] for f in filas if f.get('van') is not None]
+    max_abs = max(abs(v) for v in vans) if vans else 1
+    if max_abs == 0:
+        max_abs = 1
+
+    print(f"    {'Valor':>16}  {'Barra':20}  {'VAN':>16}  {'TIR':>8}  Estado")
+    print(f"    {'─'*16}  {'─'*20}  {'─'*16}  {'─'*8}  {'─'*10}")
+    for f in filas:
+        van = f.get('van', 0) or 0
+        tir = f.get('tir')
+        val = f['valor_discreto']
+        if abs(val) >= 1000:
+            val_s = fmt_moneda(val)
+        elif val < 1:
+            val_s = f"    {val*100:.2f}%"
+        else:
+            val_s = f"    {val:>10,.2f}"
+        b = barra(max(van, 0), max_abs, 18)
+        viable = "VIABLE" if f.get('viable') else "NO VIABLE"
+        tir_s = fmt_pct(tir) if tir else '  N/A  '
+        print(f"    {val_s}  {b}  {fmt_moneda(van)}  {tir_s:>8}  {viable}")
+    print()
+
+
+def _mostrar_disc_vt(filas: list):
+    vts = [f['valor_terminal'] for f in filas if f.get('valor_terminal') is not None]
+    max_vt = max(vts) if vts else 1
+    print(f"    {'Valor':>16}  {'Barra':20}  {'Valor Terminal':>16}")
+    print(f"    {'─'*16}  {'─'*20}  {'─'*16}")
+    for f in filas:
+        val = f['valor_discreto']
+        vt = f.get('valor_terminal')
+        metodo = f.get('metodo', '')
+        if metodo:
+            val_s = f"    {metodo:>10}"
+        elif val < 1:
+            val_s = f"    {val*100:.2f}%"
+        else:
+            val_s = f"    {val:>10,.2f}"
+        if vt is not None:
+            b = barra(vt, max_vt, 18)
+            vt_s = fmt_moneda(vt)
+        else:
+            b = '░' * 18
+            vt_s = '       N/A'
+        print(f"    {val_s}  {b}  {vt_s}")
+    print()
+
+
+def _mostrar_disc_convertible(filas: list):
+    print(f"    {'Escenario':>20}  {'Dilución':>10}  {'Fundador':>10}  {'Val.Efectiva':>16}  Método")
+    print(f"    {'─'*20}  {'─'*10}  {'─'*10}  {'─'*16}  {'─'*10}")
+    for f in filas:
+        label = f.get('label', str(f['valor_discreto']))
+        dil = f['dilucion_pct']
+        own = f['ownership_fundador']
+        val_ef = f['valoracion_efectiva']
+        metodo = f.get('metodo', '')
+        print(f"    {label:>20}  {dil:>9.2f}%  {own:>9.2f}%  {fmt_moneda(val_ef)}  {metodo}")
+    print()
+
+
+def _mostrar_disc_capital_trabajo(filas: list):
+    print(f"    {'Valor':>10}  {'Ciclo Caja':>12}  {'Capital Nec.':>16}  Estado")
+    print(f"    {'─'*10}  {'─'*12}  {'─'*16}  {'─'*15}")
+    for f in filas:
+        val = f['valor_discreto']
+        ciclo = f['ciclo_caja']
+        cap = f.get('capital_necesario')
+        estado = "Favorable" if ciclo < 30 else "Moderado" if ciclo < 60 else "Desfavorable"
+        cap_s = fmt_moneda(cap) if cap is not None else '       N/A'
+        print(f"    {val:>10.0f}  {ciclo:>10.0f} d  {cap_s}  {estado}")
+    print()
+
+
+def _mostrar_disc_credito(filas: list):
+    print(f"    {'Valor':>16}  {'Cuota':>16}  {'Total Pagado':>16}")
+    print(f"    {'─'*16}  {'─'*16}  {'─'*16}")
+    for f in filas:
+        val = f['valor_discreto']
+        if val < 1:
+            val_s = f"    {val*100:.2f}%"
+        else:
+            val_s = fmt_moneda(val)
+        print(f"    {val_s}  {fmt_moneda(f['cuota'])}  {fmt_moneda(f['total_pagado'])}")
+    print()
+
+
+def _mostrar_disc_runway(filas: list):
+    print(f"    {'Valor':>16}  Resultado")
+    print(f"    {'─'*16}  {'─'*30}")
+    for f in filas:
+        val = f['valor_discreto']
+        if val < 1:
+            val_s = f"    {val*100:.2f}%"
+        else:
+            val_s = fmt_moneda(val)
+        display = f.get('meses_display', str(f.get('meses', 'N/A')))
+        print(f"    {val_s}  {display}")
+    print()
+
+
+# ─── Display: Sensibilidad porcentual para tipos nuevos ────
+
+def _mostrar_sens_capital_trabajo(filas: list):
+    print(f"    {'Variación':>9}  {'Ciclo Caja':>12}  {'Capital Nec.':>16}  Estado")
+    print(f"    {'─'*9}  {'─'*12}  {'─'*16}  {'─'*15}")
+    for f in filas:
+        pct = f['variacion_pct']
+        sgn = '+' if pct >= 0 else ''
+        ciclo = f['ciclo_caja']
+        cap = f.get('capital_necesario')
+        estado = "Favorable" if ciclo < 30 else "Moderado" if ciclo < 60 else "Desfavorable"
+        cap_s = fmt_moneda(cap) if cap is not None else '       N/A'
+        print(f"    {sgn}{pct:>7.0f}%  {ciclo:>10.0f} d  {cap_s}  {estado}")
+    print()
+
+
+def _mostrar_sens_convertible(filas: list):
+    print(f"    {'Variación':>9}  {'Dilución':>10}  {'Fundador':>10}  {'Val.Efectiva':>16}  Método")
+    print(f"    {'─'*9}  {'─'*10}  {'─'*10}  {'─'*16}  {'─'*10}")
+    for f in filas:
+        pct = f['variacion_pct']
+        sgn = '+' if pct >= 0 else ''
+        dil = f['dilucion_pct']
+        own = f['ownership_fundador']
+        val_ef = f['valoracion_efectiva']
+        metodo = f.get('metodo', '')
+        print(f"    {sgn}{pct:>7.0f}%  {dil:>9.2f}%  {own:>9.2f}%  {fmt_moneda(val_ef)}  {metodo}")
+    print()
