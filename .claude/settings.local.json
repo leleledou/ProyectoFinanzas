@@ -14,7 +14,9 @@
       "Bash(python -c \"import app; print\\('Import OK'\\)\")",
       "Bash(python -m py_compile main.py app.py capex_opex.py)",
       "Bash(python -X utf8 -c ':*)",
-      "Bash(python -m py_compile main.py app.py capex_opex.py parser.py motor.py calculo.py criterio.py validador.py presentacion.py sensibilidad.py)"
+      "Bash(python -m py_compile main.py app.py capex_opex.py parser.py motor.py calculo.py criterio.py validador.py presentacion.py sensibilidad.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python test_casos.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python test_full.py)"
     ]
   }
 }

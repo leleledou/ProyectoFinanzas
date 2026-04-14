@@ -393,31 +393,50 @@ _SEMANTIC_REWRITES: List[Tuple[re.Pattern, str]] = [
     # "a 11%" entre flujos anuales → "con tasa del 11%"
     (re.compile(r'\b(a|al)\s+(\d+(?:[.,]\d+)?\s*%)', re.IGNORECASE),
      r'con tasa del \2'),
-    # Sinónimos de inversión inicial / CAPEX
-    (re.compile(r'\bcapital\s+inicial\s+de\b', re.IGNORECASE), 'capital de'),
-    (re.compile(r'\bmonto\s+inicial\s+de\b', re.IGNORECASE), 'inversión de'),
+    # Recursos / dinero
     (re.compile(r'\brecursos\s+del\s+proyecto\b', re.IGNORECASE), 'inversión'),
     (re.compile(r'\brecursos\s+de\s+arranque\b', re.IGNORECASE), 'inversión inicial'),
     (re.compile(r'\bdinero\s+disponible\b', re.IGNORECASE), 'saldo'),
-    # Sinónimos de flujos
+    # Sinónimos de flujos (listas de varios valores anuales)
     (re.compile(r'\bingresos?\s+por\s+a[ñn]o\b', re.IGNORECASE), 'flujos anuales'),
+    (re.compile(r'\bingresos?\s+anuales?\s+de\b', re.IGNORECASE), 'flujos anuales de'),
+    (re.compile(r'\bretornos?\s+esperados?\s*:?', re.IGNORECASE), 'flujos:'),
+    (re.compile(r'\bretornos?\s+de\b', re.IGNORECASE), 'flujos de'),
+    (re.compile(r'\bretornos?\b', re.IGNORECASE), 'flujos'),
     (re.compile(r'\bmontos?\s+por\s+per[ií]odo\b', re.IGNORECASE), 'flujos'),
     (re.compile(r'\bentradas?\s+anuales?\b', re.IGNORECASE), 'flujos anuales'),
-    (re.compile(r'\bretornos?\b', re.IGNORECASE), 'flujos'),
+    (re.compile(r'\bgenerando\s+ingresos?\s+de\b', re.IGNORECASE), 'flujos de'),
+    (re.compile(r'\bgenera\s+flujos?\s+de\b', re.IGNORECASE), 'flujos de'),
     # Costos operativos / OPEX
     (re.compile(r'\bcostos?\s+operativos?\s+mensuales?\b', re.IGNORECASE),
      'gasto mensual'),
     (re.compile(r'\bpagos?\s+recurrentes?\b', re.IGNORECASE), 'gasto mensual'),
-    # Análisis de sensibilidad explícita con valores discretos
-    (re.compile(r'\b(?:an[aá]lisis\s+de\s+)?sensibilidad\s+de\b', re.IGNORECASE),
-     'escenarios de'),
-    # Escenarios de cambio de plazo: "aumentamos / disminuimos N meses/años"
-    (re.compile(r'\b(?:si\s+)?(?:le\s+)?aumentamos?\s+(\d+)\s*(meses?|a[ñn]os?)',
+    # Sensibilidad explícita: "variaciones de 8%, 15% y 20%" / "sensibilidad de ..."
+    (re.compile(r'\b(?:an[aá]lisis\s+de\s+)?sensibilidad\s+'
+                r'(?:con\s+)?(?:variaciones?\s+de\s+)?', re.IGNORECASE),
+     'escenarios de '),
+    (re.compile(r'\bvariando\s+la\s+tasa\s+en\b', re.IGNORECASE),
+     'escenarios de tasa'),
+    (re.compile(r'\bvariaciones?\s+de\b', re.IGNORECASE), 'escenarios de'),
+    # "tasa cambia de X% a Y%" → escenarios discretos
+    (re.compile(r'\btasa\s+cambia\s+de\s+(\d+(?:[.,]\d+)?)\s*%\s+a\s+'
+                r'(\d+(?:[.,]\d+)?)\s*%', re.IGNORECASE),
+     r'tasa del \1% escenarios de tasa \1%, \2%'),
+    # Escenarios de cambio de plazo (aumentar / ampliar / extender)
+    (re.compile(r'\b(?:si\s+)?(?:se\s+)?(?:le\s+)?'
+                r'(?:aumentamos?|aumenta|ampl[ií]a|extiende|alarga|suma|sumamos|'
+                r'incrementamos?|incrementa)\s+'
+                r'(?:el\s+plazo\s+(?:en\s+|de\s+)?)?'
+                r'(\d+)\s*(meses?|a[ñn]os?)(?:\s+adicionales?)?(?:\s+mas)?',
                 re.IGNORECASE),
-     r'escenario plazo mas \1 \2'),
-    (re.compile(r'\b(?:si\s+)?(?:le\s+)?(?:disminuimos?|reducimos?|restamos?)\s+'
-                r'(\d+)\s*(meses?|a[ñn]os?)', re.IGNORECASE),
-     r'escenario plazo menos \1 \2'),
+     r'escenario plazo mas \1 xmeses'),
+    (re.compile(r'\b(?:si\s+)?(?:se\s+)?(?:le\s+)?'
+                r'(?:disminuimos?|disminuye|reducimos?|reduce|restamos?|resta|'
+                r'acortamos?|acorta|recorta)\s+'
+                r'(?:el\s+plazo\s+(?:en\s+|de\s+)?)?'
+                r'(\d+)\s*(meses?|a[ñn]os?)(?:\s+menos)?',
+                re.IGNORECASE),
+     r'escenario plazo menos \1 xmeses'),
     # "cuánto vas a devolver" → indica interés simple de monto final
     (re.compile(r'\bcu[aá]nto\s+(?:vas\s+a|voy\s+a|debes?)\s+devolver\b',
                 re.IGNORECASE),
@@ -430,11 +449,74 @@ def _enriquecer_semantica(texto: str) -> str:
     if not texto:
         return texto
     out = texto
+    # Pases contextuales: resolver ambigüedades léxicas antes de las reescrituras.
+    out = _resolver_saldo_vs_capital(out)
+    out = _resolver_capital_vs_inversion(out)
     for patron, repl in _SEMANTIC_REWRITES:
         out = patron.sub(repl, out)
     # Colapsar espacios extra generados por las sustituciones
     out = re.sub(r'[ \t]{2,}', ' ', out)
     return out
+
+
+_RE_CAP_INIT = re.compile(
+    r'\b(capital\s+inicial|monto\s+inicial|monto\s+de|monto|capital)\s+de\b',
+    re.IGNORECASE)
+_HINTS_INVERSION = (
+    'flujo', 'flujos', 'ingresos de', 'retorno', 'retornos', 'van', 'tir',
+    'generando', 'genera flujos', 'proyecto', 'año 1', 'año 2', 'anio 1',
+    'primer año', 'primer anio', 'rentabilidad del proyecto', 'inversión inicial',
+    'inversion inicial',
+)
+_HINTS_CAPITAL = (
+    'interés simple', 'interes simple', 'interés compuesto', 'interes compuesto',
+    'monto final', 'valor acumulado', 'se invierte a una tasa',
+    'cuánto vas a devolver', 'cuanto vas a devolver',
+    'capital de', 'se dispone de un capital', 'se cuenta con',
+)
+
+
+_RE_CUENTA_CON = re.compile(
+    r'\bse\s+cuenta\s+con\b', re.IGNORECASE)
+_HINTS_INTERES = (
+    'interés simple', 'interes simple', 'interés compuesto', 'interes compuesto',
+    'monto final', 'valor acumulado', 'valor final',
+)
+
+
+def _resolver_saldo_vs_capital(texto: str) -> str:
+    """'Se cuenta con N' puede ser saldo (runway) o capital (interés). Si el
+    enunciado menciona interés/monto final, preferir capital."""
+    low = texto.lower()
+    if any(h in low for h in _HINTS_INTERES):
+        return _RE_CUENTA_CON.sub('se dispone de un capital de', texto)
+    return texto
+
+
+def _resolver_capital_vs_inversion(texto: str) -> str:
+    """
+    Decide si 'capital inicial/monto inicial/monto de' en el enunciado debe
+    leerse como inversión (proyecto con flujos) o como capital (interés simple
+    o compuesto). Reescribe hacia la forma canónica que el CONTEXTO_MAP maneja.
+    """
+    low = texto.lower()
+    score_inv = sum(1 for h in _HINTS_INVERSION if h in low)
+    score_cap = sum(1 for h in _HINTS_CAPITAL if h in low)
+    if score_inv == score_cap:
+        return texto
+
+    destino = 'inversión de' if score_inv > score_cap else 'capital de'
+
+    def _rep(m):
+        # Conserva la palabra "inicial" si la venía para reforzar el mapeo
+        grp = m.group(1).lower()
+        if 'inicial' in grp and destino.startswith('inversión'):
+            return 'inversión inicial de'
+        if 'inicial' in grp and destino.startswith('capital'):
+            return 'capital de'
+        return destino
+
+    return _RE_CAP_INIT.sub(_rep, texto)
 
 
 def analizar_texto(texto: str) -> Dict[str, Any]:
