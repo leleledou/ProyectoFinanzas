@@ -21,9 +21,11 @@ from presentacion import (
     encabezado, seccion, caja_criterio, mostrar_resultados,
     mostrar_sensibilidad, mostrar_datos_faltantes,
     mostrar_variables_detectadas, fmt_moneda, fmt_pct,
+    set_moneda,
 )
 from criterio import generar
 from sensibilidad import analizar as analizar_sensibilidad
+from capex_opex import interpretar as interpretar_capex_opex
 
 # Variables que se muestran como porcentaje en la confirmación
 _VARS_PCT_CONFIRM = {'tasa', 'tasa_crecimiento', 'tasa_caida', 'descuento_pct'}
@@ -116,6 +118,7 @@ def procesar_problema(texto: str):
     tipo_nombre = analisis['tipo_nombre']
     variables = analisis['variables']
     config_sens = analisis['sensibilidad']
+    set_moneda(analisis.get('moneda', '$'))
 
     # 2. VERIFICACIÓN — mostrar lo detectado y pedir confirmación
     confirmado, tipo, tipo_nombre, variables = _confirmar_analisis(
@@ -163,6 +166,18 @@ def procesar_problema(texto: str):
     lineas_criterio = generar(tipo, resultados, variables,
                               faltantes_legibles, sens_resultado)
     caja_criterio(f"CRITERIO — {tipo_nombre.upper()}", lineas_criterio)
+
+    # 9. Capa adicional: interpretación CAPEX / OPEX (no intrusiva)
+    info_co = interpretar_capex_opex(texto)
+    if info_co:
+        seccion("INTERPRETACIÓN COMPLEMENTARIA — CAPEX / OPEX")
+        for var in info_co['variables']:
+            monto_txt = (f"${var['monto']:,.2f}"
+                         if var['monto'] is not None else "(sin monto detectado)")
+            print(f"  • {var['tipo']} — {var['etiqueta']}: {monto_txt}")
+            print(f"      Frase clave: \"{var['frase_clave']}\"")
+            print(f"      Fragmento:   \"{var['fragmento']}\"")
+        caja_criterio("CRITERIO — CAPEX / OPEX", info_co['criterios'])
 
 
 def main():

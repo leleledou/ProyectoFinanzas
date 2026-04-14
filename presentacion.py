@@ -68,8 +68,19 @@ def caja_criterio(titulo: str, lineas: list):
     print(f"  ╚{'═' * w}╝\n")
 
 
+_MONEDA_SIMBOLO = '$'
+
+
+def set_moneda(simbolo: str) -> None:
+    """Define el símbolo monetario usado por fmt_moneda (p.ej. '$' o 'Bs')."""
+    global _MONEDA_SIMBOLO
+    _MONEDA_SIMBOLO = simbolo or '$'
+
+
 def fmt_moneda(v: float) -> str:
-    return f"${v:>14,.2f}"
+    sim = _MONEDA_SIMBOLO
+    ancho = max(0, 15 - len(sim))
+    return f"{sim}{v:>{ancho},.2f}"
 
 
 def fmt_pct(v) -> str:
@@ -251,11 +262,12 @@ def mostrar_credito(res: dict):
             if fila == '...':
                 print(f"    {'...':>55}")
                 continue
+            sim = _MONEDA_SIMBOLO
             print(f"    {fila['periodo']:>4}  "
-                  f"${fila['cuota']:>11,.2f}  "
-                  f"${fila['interes']:>11,.2f}  "
-                  f"${fila['capital']:>11,.2f}  "
-                  f"${fila['saldo']:>13,.2f}")
+                  f"{sim}{fila['cuota']:>11,.2f}  "
+                  f"{sim}{fila['interes']:>11,.2f}  "
+                  f"{sim}{fila['capital']:>11,.2f}  "
+                  f"{sim}{fila['saldo']:>13,.2f}")
         print()
 
 

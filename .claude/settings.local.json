@@ -11,7 +11,10 @@
       "Bash(python -c \"from parser import analizar_texto, TIPOS; from validador import validar; from motor import calcular; from criterio import generar; from sensibilidad import analizar; print\\('OK: todos los módulos importan correctamente'\\)\")",
       "Bash(where streamlit:*)",
       "Bash(where python:*)",
-      "Bash(python -c \"import app; print\\('Import OK'\\)\")"
+      "Bash(python -c \"import app; print\\('Import OK'\\)\")",
+      "Bash(python -m py_compile main.py app.py capex_opex.py)",
+      "Bash(python -X utf8 -c ':*)",
+      "Bash(python -m py_compile main.py app.py capex_opex.py parser.py motor.py calculo.py criterio.py validador.py presentacion.py sensibilidad.py)"
     ]
   }
 }

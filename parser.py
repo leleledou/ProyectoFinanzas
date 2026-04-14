@@ -294,6 +294,149 @@ PATRON_FLUJO_ANIO = re.compile(
 # FUNCIÓN PRINCIPAL
 # ════════════════════════════════════════════════════════════════
 
+# ════════════════════════════════════════════════════════════════
+# CAPA DE NORMALIZACIÓN DE MONEDAS (preprocesamiento)
+# ════════════════════════════════════════════════════════════════
+
+_BOL_TOKENS = (
+    r'moneda\s+boliviana',
+    r'bolivianos?',
+    r'BOB',
+    r'Bs\.?',
+)
+_USD_TOKENS = (
+    r'd[óo]lares?',
+    r'US\$',
+    r'USD',
+)
+
+_RE_BOL_ANTES = re.compile(
+    r'(?<![A-Za-z0-9])(?:' + '|'.join(_BOL_TOKENS) + r')\s*(-?\s*[\d][\d.,]*)',
+    re.IGNORECASE)
+_RE_BOL_DESPUES = re.compile(
+    r'(-?\s*[\d][\d.,]*)\s*(?:' + '|'.join(_BOL_TOKENS) + r')(?![A-Za-z0-9])',
+    re.IGNORECASE)
+_RE_USD_ANTES = re.compile(
+    r'(?<![A-Za-z0-9])(?:' + '|'.join(_USD_TOKENS) + r')\s*(-?\s*[\d][\d.,]*)',
+    re.IGNORECASE)
+_RE_USD_DESPUES = re.compile(
+    r'(-?\s*[\d][\d.,]*)\s*(?:' + '|'.join(_USD_TOKENS) + r')(?![A-Za-z0-9])',
+    re.IGNORECASE)
+
+
+def _normalizar_monedas(texto: str) -> Tuple[str, Optional[str]]:
+    """
+    Capa previa al análisis: reconoce variantes de bolivianos y dólares
+    y las normaliza a un formato que el extractor numérico ya maneja.
+
+    - Bs / Bs. / BOB / bolivianos / moneda boliviana → se marcan con 'Bs '
+      antepuesto al número (sin alterar el valor).
+    - USD / US$ / dólares / dolares / dólar / dolar → se convierten a '$'
+      antepuesto al número, para aprovechar la detección existente.
+
+    Retorna (texto_normalizado, moneda_dominante) donde moneda_dominante
+    es '$', 'Bs' o None si no se detectó.
+    """
+    if not texto:
+        return texto, None
+
+    cuenta_bol = 0
+    cuenta_usd = 0
+
+    def _sub_bol(m):
+        nonlocal cuenta_bol
+        cuenta_bol += 1
+        num = m.group(1).replace(' ', '')
+        return f' Bs {num} '
+
+    def _sub_usd(m):
+        nonlocal cuenta_usd
+        cuenta_usd += 1
+        num = m.group(1).replace(' ', '')
+        return f' ${num} '
+
+    # Dólares primero (US$ contiene $ que podría confundirse luego)
+    out = _RE_USD_ANTES.sub(_sub_usd, texto)
+    out = _RE_USD_DESPUES.sub(_sub_usd, out)
+    out = _RE_BOL_ANTES.sub(_sub_bol, out)
+    out = _RE_BOL_DESPUES.sub(_sub_bol, out)
+
+    # Colapsar espacios múltiples generados por las sustituciones
+    out = re.sub(r'[ \t]{2,}', ' ', out)
+
+    if cuenta_bol == 0 and cuenta_usd == 0:
+        return out, None
+
+    # Si aparecen ambas, gana la más frecuente; empate → no se fuerza una sola
+    if cuenta_bol > cuenta_usd:
+        moneda = 'Bs'
+    elif cuenta_usd > cuenta_bol:
+        moneda = '$'
+    else:
+        moneda = '$' if cuenta_usd else 'Bs'
+    return out, moneda
+
+
+# ════════════════════════════════════════════════════════════════
+# CAPA DE INTERPRETACIÓN SEMÁNTICA (preprocesamiento)
+# ════════════════════════════════════════════════════════════════
+# Reescribe frases en lenguaje natural a formas canónicas que el
+# parser existente sabe mapear. No altera la lógica ni las fórmulas.
+
+_SEMANTIC_REWRITES: List[Tuple[re.Pattern, str]] = [
+    # Tasa de descuento → tasa (evita colisión con "descuento del" de convertibles)
+    (re.compile(r'\btasa\s+de\s+descuento\b', re.IGNORECASE), 'tasa'),
+    (re.compile(r'\btasa\s+referencial\b', re.IGNORECASE), 'tasa'),
+    (re.compile(r'\btasa\s+de\s+referencia\b', re.IGNORECASE), 'tasa'),
+    (re.compile(r'\binter[eé]s\s+anual\b', re.IGNORECASE), 'tasa anual'),
+    (re.compile(r'\binter[eé]s\s+del\b', re.IGNORECASE), 'tasa del'),
+    # "a 11%" entre flujos anuales → "con tasa del 11%"
+    (re.compile(r'\b(a|al)\s+(\d+(?:[.,]\d+)?\s*%)', re.IGNORECASE),
+     r'con tasa del \2'),
+    # Sinónimos de inversión inicial / CAPEX
+    (re.compile(r'\bcapital\s+inicial\s+de\b', re.IGNORECASE), 'capital de'),
+    (re.compile(r'\bmonto\s+inicial\s+de\b', re.IGNORECASE), 'inversión de'),
+    (re.compile(r'\brecursos\s+del\s+proyecto\b', re.IGNORECASE), 'inversión'),
+    (re.compile(r'\brecursos\s+de\s+arranque\b', re.IGNORECASE), 'inversión inicial'),
+    (re.compile(r'\bdinero\s+disponible\b', re.IGNORECASE), 'saldo'),
+    # Sinónimos de flujos
+    (re.compile(r'\bingresos?\s+por\s+a[ñn]o\b', re.IGNORECASE), 'flujos anuales'),
+    (re.compile(r'\bmontos?\s+por\s+per[ií]odo\b', re.IGNORECASE), 'flujos'),
+    (re.compile(r'\bentradas?\s+anuales?\b', re.IGNORECASE), 'flujos anuales'),
+    (re.compile(r'\bretornos?\b', re.IGNORECASE), 'flujos'),
+    # Costos operativos / OPEX
+    (re.compile(r'\bcostos?\s+operativos?\s+mensuales?\b', re.IGNORECASE),
+     'gasto mensual'),
+    (re.compile(r'\bpagos?\s+recurrentes?\b', re.IGNORECASE), 'gasto mensual'),
+    # Análisis de sensibilidad explícita con valores discretos
+    (re.compile(r'\b(?:an[aá]lisis\s+de\s+)?sensibilidad\s+de\b', re.IGNORECASE),
+     'escenarios de'),
+    # Escenarios de cambio de plazo: "aumentamos / disminuimos N meses/años"
+    (re.compile(r'\b(?:si\s+)?(?:le\s+)?aumentamos?\s+(\d+)\s*(meses?|a[ñn]os?)',
+                re.IGNORECASE),
+     r'escenario plazo mas \1 \2'),
+    (re.compile(r'\b(?:si\s+)?(?:le\s+)?(?:disminuimos?|reducimos?|restamos?)\s+'
+                r'(\d+)\s*(meses?|a[ñn]os?)', re.IGNORECASE),
+     r'escenario plazo menos \1 \2'),
+    # "cuánto vas a devolver" → indica interés simple de monto final
+    (re.compile(r'\bcu[aá]nto\s+(?:vas\s+a|voy\s+a|debes?)\s+devolver\b',
+                re.IGNORECASE),
+     'calcular monto final de interés simple'),
+]
+
+
+def _enriquecer_semantica(texto: str) -> str:
+    """Reescribe sinónimos y expresiones naturales a formas canónicas."""
+    if not texto:
+        return texto
+    out = texto
+    for patron, repl in _SEMANTIC_REWRITES:
+        out = patron.sub(repl, out)
+    # Colapsar espacios extra generados por las sustituciones
+    out = re.sub(r'[ \t]{2,}', ' ', out)
+    return out
+
+
 def analizar_texto(texto: str) -> Dict[str, Any]:
     """
     Analiza el texto en lenguaje natural y retorna un diccionario con:
@@ -301,9 +444,12 @@ def analizar_texto(texto: str) -> Dict[str, Any]:
       - tipo_nombre: str (nombre legible)
       - variables: dict {nombre: valor}
       - sensibilidad: dict | None
+      - moneda: str ('$' o 'Bs') detectada en el texto
       - texto_original: str
     """
-    texto_l = texto.lower()
+    texto_norm, moneda = _normalizar_monedas(texto)
+    texto_norm = _enriquecer_semantica(texto_norm)
+    texto_l = texto_norm.lower()
 
     tipo, tipo_nombre = _detectar_tipo(texto_l)
     variables = _extraer_variables(texto_l, tipo)
@@ -314,6 +460,7 @@ def analizar_texto(texto: str) -> Dict[str, Any]:
         'tipo_nombre': tipo_nombre,
         'variables': variables,
         'sensibilidad': sensibilidad,
+        'moneda': moneda or '$',
         'texto_original': texto,
     }
 

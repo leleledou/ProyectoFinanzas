@@ -10,6 +10,7 @@ from parser import analizar_texto, TIPOS
 from validador import validar, resumir_faltantes, nombre_legible
 from motor import calcular
 from criterio import generar
+from capex_opex import interpretar as interpretar_capex_opex
 from sensibilidad import analizar as analizar_sensibilidad
 from tasas import analizar_tasas
 
@@ -53,8 +54,16 @@ _VARS_ENTERAS = {'periodos', 'num_cuotas', 'capitalizaciones',
                  'dias_cobro', 'dias_inventario', 'dias_pago'}
 
 
+_MONEDA_SIMBOLO = '$'
+
+
+def set_moneda(simbolo):
+    global _MONEDA_SIMBOLO
+    _MONEDA_SIMBOLO = simbolo or '$'
+
+
 def fmt_moneda(v):
-    return f"${v:,.2f}"
+    return f"{_MONEDA_SIMBOLO}{v:,.2f}"
 
 
 def fmt_pct(v):
@@ -649,6 +658,8 @@ if analizar_btn and texto.strip():
         st.error(f"Error al analizar el texto: {e}")
         st.stop()
 
+    set_moneda(analisis.get('moneda', '$'))
+
     tipo = analisis['tipo']
     tipo_nombre = analisis['tipo_nombre']
     variables = analisis['variables']
@@ -745,6 +756,28 @@ if analizar_btn and texto.strip():
     lineas_criterio = generar(tipo, resultados, variables,
                               faltantes_legibles, sens_resultado)
     _mostrar_criterio_st(lineas_criterio)
+
+    # Capa adicional: interpretación CAPEX / OPEX (no intrusiva)
+    info_co = interpretar_capex_opex(texto)
+    if info_co:
+        st.markdown("---")
+        st.markdown("### Interpretación Complementaria — CAPEX / OPEX")
+        cols = st.columns(len(info_co['variables']))
+        for col, var in zip(cols, info_co['variables']):
+            with col:
+                monto_txt = (f"${var['monto']:,.2f}"
+                             if var['monto'] is not None
+                             else "— sin monto detectado —")
+                st.markdown(f"**{var['tipo']} · {var['etiqueta']}**")
+                st.markdown(f"#### {monto_txt}")
+                st.caption(f"Frase clave: *\"{var['frase_clave']}\"*")
+                st.markdown(
+                    f"<div style='font-size:0.85rem;opacity:0.8;'>"
+                    f"Fragmento: \"{var['fragmento']}\"</div>",
+                    unsafe_allow_html=True,
+                )
+        st.markdown("#### Criterio CAPEX / OPEX")
+        _mostrar_criterio_st(info_co['criterios'])
 
 elif analizar_btn and not texto.strip():
     st.warning("Por favor, ingrese un problema financiero para analizar.")
