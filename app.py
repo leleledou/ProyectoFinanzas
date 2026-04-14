@@ -11,6 +11,7 @@ from validador import validar, resumir_faltantes, nombre_legible
 from motor import calcular
 from criterio import generar
 from sensibilidad import analizar as analizar_sensibilidad
+from tasas import analizar_tasas
 
 # ─── Configuración de página ────────────────────────────────
 
@@ -515,6 +516,57 @@ def _sens_conv_st(filas, es_discreto):
     st.dataframe(df, use_container_width=True, hide_index=True)
 
 
+# ─── Display de análisis de tasas ───────────────────────────
+
+def _mostrar_tasas_st(info_tasas):
+    """Muestra los resultados del análisis de tasas de interés."""
+    if not info_tasas:
+        return
+
+    tasas = info_tasas['tasas']
+    contexto = info_tasas['contexto']
+    recomendacion = info_tasas.get('recomendacion')
+
+    st.markdown("### Análisis de Tasas de Interés")
+
+    for i, t in enumerate(tasas):
+        with st.container():
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric(f"Tasa {i+1} — Tipo", t['tipo_tasa'].capitalize())
+            with c2:
+                st.metric("Tasa Original", f"{t['valor_pct']:.2f}%")
+            with c3:
+                tea = t['tasa_efectiva']
+                if tea is not None:
+                    st.metric("Tasa Efectiva Anual", f"{tea * 100:.4f}%")
+            if t['tipo_tasa'] == 'nominal':
+                st.caption(
+                    f"Capitalización: {t['capitalizacion_nombre']} "
+                    f"({t['capitalizacion_n']} veces/año)"
+                )
+
+    if recomendacion:
+        ctx_label = {
+            'inversion': 'Inversión',
+            'financiamiento': 'Financiamiento',
+            'general': 'General',
+        }.get(contexto, contexto)
+
+        if recomendacion.get('mejor_idx') is not None:
+            st.success(
+                f"**Recomendación ({ctx_label}):** "
+                f"Conviene la tasa {recomendacion['mejor_tasa']} "
+                f"(efectiva: {recomendacion['tasa_efectiva'] * 100:.4f}%) — "
+                f"{recomendacion['criterio']}"
+            )
+        else:
+            st.info(
+                f"**Para inversión** conviene: {recomendacion['mejor_inversion']}  \n"
+                f"**Para financiamiento** conviene: {recomendacion['mejor_financiamiento']}"
+            )
+
+
 # ─── Display de criterio ────────────────────────────────────
 
 def _mostrar_criterio_st(lineas):
@@ -679,6 +731,12 @@ if analizar_btn and texto.strip():
         if sens_resultado:
             st.markdown("### Análisis de Sensibilidad")
             _mostrar_sensibilidad_st(sens_resultado, tipo)
+
+    # Análisis de tasas de interés
+    info_tasas = analizar_tasas(texto)
+    if info_tasas:
+        st.markdown("---")
+        _mostrar_tasas_st(info_tasas)
 
     # Criterio de decisión
     st.markdown("---")
